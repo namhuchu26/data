@@ -1,0 +1,72 @@
+[
+ {
+  "url": "http://localhost:8000/#overview",
+  "wait": 7000,
+  "name": "fig_overview",
+  "sel": "#ov-tiles|#ov-flow"
+ },
+ {
+  "url": "http://localhost:8000/#overview",
+  "name": "fig_quality",
+  "sel": "#ov-quality^"
+ },
+ {
+  "url": "http://localhost:8000/#lake",
+  "wait": 7000,
+  "name": "fig_lake",
+  "sel": "#lake-zones|.grid-lake"
+ },
+ {
+  "url": "http://localhost:8000/#pipeline",
+  "wait": 7000,
+  "name": "fig_dag",
+  "sel": "#pl-dags|#pl-graph^"
+ },
+ {
+  "url": "http://localhost:8000/#pipeline",
+  "name": "fig_tasks",
+  "sel": "#pl-tasks^"
+ },
+ {
+  "url": "http://localhost:8000/#dw",
+  "wait": 9000,
+  "name": "fig_star",
+  "sel": "#dw-star^"
+ },
+ {
+  "url": "http://localhost:8000/#dw",
+  "name": "fig_dw_time",
+  "sel": "[data-chart=dw-monthly]|[data-chart=dw-monthly-rating]"
+ },
+ {
+  "url": "http://localhost:8000/#dw",
+  "name": "fig_dw_grid",
+  "sel": "[data-chart=dw-rating]|[data-chart=dw-labels]|[data-chart=dw-brands]|[data-chart=dw-price]"
+ },
+ {
+  "url": "http://localhost:8000/#dw",
+  "name": "fig_dw_sql",
+  "sel": "#dw-sql^"
+ },
+ {
+  "url": "http://localhost:8000/#mining",
+  "wait": 8000,
+  "name": "fig_mn_compare",
+  "sel": "[data-chart=mn-compare]|[data-chart=mn-perclass]|[data-chart=mn-hist]"
+ },
+ {
+  "url": "http://localhost:8000/#mining",
+  "name": "fig_mn_cm",
+  "sel": "#mn-cms^"
+ },
+ {
+  "url": "http://localhost:8000/#mining",
+  "name": "fig_mn_terms",
+  "sel": "#mn-terms^"
+ },
+ {
+  "url": "http://localhost:8000/#mining",
+  "name": "fig_mn_errors",
+  "sel": "#mn-errors^"
+ }
+]

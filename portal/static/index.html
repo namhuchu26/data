@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sentiment Data Portal</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232a78d6'/><path d='M8 22V14M14 22V9M20 22V16M26 22V12' stroke='white' stroke-width='3' stroke-linecap='round'/></svg>">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    try { const t = localStorage.getItem("portal-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <div class="brand-title">Sentiment Data Portal</div>
+        <div class="brand-sub">Amazon Reviews 2023 · <span id="cfg-category">…</span></div>
+      </div>
+    </div>
+    <div class="health" id="health" aria-live="polite"></div>
+    <button class="icon-btn" id="theme-btn" title="Đổi giao diện sáng/tối" aria-label="Đổi giao diện sáng/tối">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+  </header>
+
+  <nav class="tabs" id="tabs" aria-label="Các phân hệ">
+    <a href="#overview" data-tab="overview">Tổng quan</a>
+    <a href="#lake" data-tab="lake">Data Lake <span class="live-dot" id="nav-live" title="Realtime"></span></a>
+    <a href="#pipeline" data-tab="pipeline">Pipeline</a>
+    <a href="#dw" data-tab="dw">Kho dữ liệu</a>
+    <a href="#mining" data-tab="mining">Khai phá dữ liệu</a>
+  </nav>
+
+  <main class="content">
+    <!-- ============================== TỔNG QUAN ============================== -->
+    <section id="tab-overview" class="tab" hidden>
+      <div class="page-head">
+        <h1>Tổng quan hệ thống</h1>
+        <p class="lead">Luồng dữ liệu từ 3 nguồn → Airflow → Data Lake MinIO → Kho PostgreSQL → Mô hình cảm xúc. Mọi số liệu dưới đây đọc trực tiếp từ các hệ thống.</p>
+      </div>
+      <div class="tiles" id="ov-tiles"></div>
+      <div class="flow" id="ov-flow"></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Lần chạy pipeline gần nhất</h2><a class="link" href="#pipeline">Xem chi tiết →</a></div>
+          <div id="ov-run"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Báo cáo chất lượng dữ liệu</h2><span class="muted small" id="ov-quality-key"></span></div>
+          <div id="ov-quality"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Hoạt động mới nhất trên Data Lake</h2><a class="link" href="#lake">Mở Data Lake →</a></div>
+        <ul class="events compact" id="ov-events"></ul>
+      </div>
+    </section>
+
+    <!-- ============================== DATA LAKE ============================== -->
+    <section id="tab-lake" class="tab" hidden>
+      <div class="page-head row">
+        <div>
+          <h1>Data Lake · MinIO</h1>
+          <p class="lead">3 vùng dữ liệu (raw → staging → curated). Sự kiện được MinIO đẩy về theo thời gian thực qua Bucket Notification.</p>
+        </div>
+        <a class="btn ghost" id="minio-console" target="_blank" rel="noopener">Mở MinIO Console ↗</a>
+      </div>
+      <div class="zones" id="lake-zones"></div>
+      <div class="grid-lake">
+        <div class="card">
+          <div class="card-head">
+            <h2>Duyệt object</h2>
+            <div class="seg" id="lake-bucket-seg" role="tablist"></div>
+          </div>
+          <input class="input" id="lake-prefix" placeholder="Lọc theo đường dẫn, ví dụ: amazon/reviews" autocomplete="off">
+          <div class="table-wrap"><table class="table" id="lake-objects"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h2>Sự kiện realtime</h2>
+            <span class="live" id="lake-live"><span class="live-dot"></span><span>Đang kết nối…</span></span>
+          </div>
+          <ul class="events" id="lake-events"></ul>
+        </div>
+      </div>
+      <div class="card" id="lake-preview-card" hidden>
+        <div class="card-head">
+          <h2 id="lake-preview-title">Xem trước</h2>
+          <div class="actions">
+            <a class="btn ghost small" id="lake-download">Tải về</a>
+            <button class="btn ghost small" id="lake-preview-close">Đóng</button>
+          </div>
+        </div>
+        <div id="lake-preview"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Tải file lên Data Lake</h2></div>
+        <form class="upload" id="lake-upload">
+          <label>Bucket
+            <select class="input" name="bucket"><option>raw</option><option>staging</option><option selected>curated</option></select>
+          </label>
+          <label>Thư mục (prefix)
+            <input class="input" name="prefix" value="models/lstm" autocomplete="off">
+          </label>
+          <label>File
+            <input class="input" type="file" name="file" required>
+          </label>
+          <button class="btn" type="submit">Tải lên</button>
+        </form>
+        <p class="muted small">Ví dụ: sau khi train LSTM trên Colab, tải <code>metrics.json</code> vào <code>curated/models/lstm/</code> để tab Khai phá so sánh với các mô hình ML.</p>
+        <p class="small" id="lake-upload-msg" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- ============================== PIPELINE ============================== -->
+    <section id="tab-pipeline" class="tab" hidden>
+      <div class="page-head row">
+        <div>
+          <h1>Pipeline · Airflow</h1>
+          <p class="lead">Điều phối ETL: thu thập 3 nguồn → làm sạch &amp; tích hợp → nạp kho → huấn luyện mô hình.</p>
+        </div>
+        <a class="btn ghost" id="airflow-ui" target="_blank" rel="noopener">Mở Airflow UI ↗</a>
+      </div>
+      <div id="pl-dags"></div>
+      <div class="card">
+        <div class="card-head"><h2>Sơ đồ tác vụ</h2><span class="muted small" id="pl-graph-run"></span></div>
+        <div class="dag-graph" id="pl-graph"></div>
+        <div class="legend" id="pl-legend"></div>
+      </div>
+      <div class="grid-runs">
+        <div class="card">
+          <div class="card-head"><h2>Các lần chạy</h2></div>
+          <ul class="runs" id="pl-runs"></ul>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Tác vụ trong lần chạy</h2><span class="muted small" id="pl-run-id"></span></div>
+          <div class="table-wrap"><table class="table" id="pl-tasks"></table></div>
+        </div>
+      </div>
+      <div class="card" id="pl-log-card" hidden>
+        <div class="card-head"><h2 id="pl-log-title">Log</h2><button class="btn ghost small" id="pl-log-close">Đóng</button></div>
+        <div id="pl-xcom"></div>
+        <pre class="log" id="pl-log"></pre>
+      </div>
+    </section>
+
+    <!-- ============================== KHO DỮ LIỆU ============================== -->
+    <section id="tab-dw" class="tab" hidden>
+      <div class="page-head">
+        <h1>Kho dữ liệu · PostgreSQL</h1>
+        <p class="lead">Lược đồ hình sao: bảng sự kiện <code>fact_reviews</code> liên kết 3 bảng chiều. Các biểu đồ là truy vấn OLAP trực tiếp trên kho.</p>
+      </div>
+      <div id="dw-empty" hidden></div>
+      <div id="dw-body">
+        <div class="tiles" id="dw-tiles"></div>
+        <div class="card">
+          <div class="card-head"><h2>Lược đồ hình sao (Star Schema)</h2></div>
+          <div class="star" id="dw-star"></div>
+        </div>
+        <div class="charts">
+          <div class="card chart-card wide" data-chart="dw-monthly"><div class="card-head"><h2>Số review theo tháng</h2></div><div class="chart-box"><canvas id="dw-monthly"></canvas></div></div>
+          <div class="card chart-card wide" data-chart="dw-monthly-rating"><div class="card-head"><h2>Rating trung bình theo tháng</h2></div><div class="chart-box"><canvas id="dw-monthly-rating"></canvas></div></div>
+          <div class="card chart-card" data-chart="dw-rating"><div class="card-head"><h2>Phân bố số sao</h2></div><div class="chart-box"><canvas id="dw-rating"></canvas></div></div>
+          <div class="card chart-card" data-chart="dw-labels"><div class="card-head"><h2>Nhãn cảm xúc theo năm</h2></div><div class="chart-box"><canvas id="dw-labels"></canvas></div></div>
+          <div class="card chart-card" data-chart="dw-brands"><div class="card-head"><h2>Top thương hiệu theo số review</h2></div><div class="chart-box tall"><canvas id="dw-brands"></canvas></div></div>
+          <div class="card chart-card" data-chart="dw-price"><div class="card-head"><h2>Rating TB theo phân khúc giá (VND)</h2></div><div class="chart-box tall"><canvas id="dw-price"></canvas></div></div>
+          <div class="card chart-card" data-chart="dw-weekday"><div class="card-head"><h2>Số review theo thứ trong tuần</h2></div><div class="chart-box"><canvas id="dw-weekday"></canvas></div></div>
+          <div class="card chart-card" data-chart="dw-fx"><div class="card-head"><h2>Tỷ giá USD→VND (World Bank)</h2></div><div class="chart-box"><canvas id="dw-fx"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Mua hàng xác thực và rating</h2></div>
+          <div class="tiles inline" id="dw-verified"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Top 10 sản phẩm nhiều review nhất</h2></div>
+          <div class="table-wrap"><table class="table" id="dw-products"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Truy vấn OLAP (SQL chỉ đọc)</h2></div>
+          <div class="chips" id="dw-samples"></div>
+          <textarea class="input sql" id="dw-sql" spellcheck="false"></textarea>
+          <div class="actions"><button class="btn" id="dw-run">Chạy truy vấn</button><span class="muted small" id="dw-sql-msg"></span></div>
+          <div class="table-wrap"><table class="table" id="dw-result"></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== KHAI PHÁ ============================== -->
+    <section id="tab-mining" class="tab" hidden>
+      <div class="page-head">
+        <h1>Khai phá dữ liệu · Phân tích cảm xúc</h1>
+        <p class="lead">Nhãn: Tiêu cực (1–2★), Trung tính (3★), Tích cực (4–5★). Đặc trưng TF-IDF cho ML; LSTM huấn luyện trên Colab với cùng tập test.</p>
+      </div>
+      <div id="mn-empty" hidden></div>
+      <div id="mn-body">
+        <div class="tiles" id="mn-tiles"></div>
+        <div class="charts">
+          <div class="card chart-card wide" data-chart="mn-compare"><div class="card-head"><h2>So sánh mô hình trên tập test</h2></div><div class="chart-box"><canvas id="mn-compare"></canvas></div></div>
+          <div class="card chart-card" data-chart="mn-perclass"><div class="card-head"><h2>F1 theo từng lớp</h2></div><div class="chart-box"><canvas id="mn-perclass"></canvas></div></div>
+          <div class="card chart-card" data-chart="mn-hist"><div class="card-head"><h2>Phân bố điểm cảm xúc theo nhãn thật</h2></div><div class="chart-box"><canvas id="mn-hist"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Ma trận nhầm lẫn</h2><span class="muted small">hàng = nhãn thật · cột = dự đoán · % theo hàng</span></div>
+          <div class="cms" id="mn-cms"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Từ khóa quyết định (Logistic Regression)</h2></div>
+          <div class="terms" id="mn-terms"></div>
+        </div>
+        <div class="card" id="mn-lstm"></div>
+        <div class="card">
+          <div class="card-head"><h2>Phân tích lỗi: review bị dự đoán sai</h2><button class="btn ghost small" id="mn-err-refresh">Lấy mẫu khác</button></div>
+          <div class="errors" id="mn-errors"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

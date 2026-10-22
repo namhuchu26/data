@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Kiến trúc</title>
+<style>
+  body { margin: 0; background: #fff; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; color: #0b0b0b; }
+  #arch { width: 1500px; display: inline-block; padding: 28px; box-sizing: border-box; }
+  .row { display: grid; grid-template-columns: 250px 40px 210px 40px 300px 40px 270px 40px 220px; align-items: center; }
+  .col { display: flex; flex-direction: column; gap: 12px; }
+  .box { border: 1.5px solid #c3c2b7; border-radius: 10px; padding: 12px 14px; background: #fcfcfb; }
+  .box h4 { margin: 0 0 4px; font-size: 15px; }
+  .box p { margin: 0; font-size: 13px; color: #52514e; }
+  .kick { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #898781; margin-bottom: 2px; }
+  .accent { border-color: #2a78d6; background: #eef5fd; }
+  .zone { border-left: 4px solid #2a78d6; }
+  .arrow { height: 2px; background: #898781; position: relative; margin: 0 4px; }
+  .arrow::after { content: ""; position: absolute; right: -2px; top: -5px; border: 6px solid transparent; border-left-color: #898781; border-right: 0; }
+  .portal { margin-top: 22px; border: 1.5px dashed #2a78d6; border-radius: 12px; padding: 12px 16px; background: #f5f9fe; display: flex; gap: 24px; align-items: center; }
+  .portal h4 { margin: 0; font-size: 15px; white-space: nowrap; }
+  .tab { border: 1px solid #c3c2b7; background: #fff; border-radius: 999px; padding: 4px 12px; font-size: 13px; }
+  .colab { margin-top: 10px; font-size: 13px; color: #52514e; }
+</style></head>
+<body><div id="arch">
+  <div class="row">
+    <div class="col">
+      <div class="kick">Nguồn dữ liệu</div>
+      <div class="box"><h4>Amazon Reviews 2023</h4><p>User reviews · .jsonl.gz (bán cấu trúc)</p></div>
+      <div class="box"><h4>Amazon Item Metadata</h4><p>Thông tin sản phẩm · .jsonl.gz</p></div>
+      <div class="box"><h4>World Bank API</h4><p>Tỷ giá USD→VND · REST/JSON</p></div>
+    </div>
+    <div class="arrow"></div>
+    <div class="col">
+      <div class="kick">Điều phối</div>
+      <div class="box accent"><h4>Apache Airflow 3</h4><p>DAG amazon_reviews_pipeline<br>Extract → Transform → Load → Mining<br>Lịch @daily</p></div>
+    </div>
+    <div class="arrow"></div>
+    <div class="col">
+      <div class="kick">Data Lake · MinIO (S3)</div>
+      <div class="box zone"><h4>raw/</h4><p>Dữ liệu gốc, phân vùng ingest_date</p></div>
+      <div class="box zone"><h4>staging/</h4><p>Parquet đã làm sạch, tích hợp + báo cáo chất lượng</p></div>
+      <div class="box zone"><h4>curated/</h4><p>Tập dữ liệu ML, dự đoán, metrics mô hình</p></div>
+    </div>
+    <div class="arrow"></div>
+    <div class="col">
+      <div class="kick">Kho dữ liệu · PostgreSQL</div>
+      <div class="box accent"><h4>Star Schema</h4><p>fact_reviews<br>dim_product · dim_user · dim_time<br>review_text · etl_load_log</p></div>
+    </div>
+    <div class="arrow"></div>
+    <div class="col">
+      <div class="kick">Khai phá dữ liệu</div>
+      <div class="box"><h4>Học máy</h4><p>TF-IDF + Naive Bayes, Logistic Regression</p></div>
+      <div class="box"><h4>Học sâu</h4><p>BiLSTM (TensorFlow / Keras)</p></div>
+    </div>
+  </div>
+  <div class="portal"><h4>Portal tổng hợp · localhost:8000</h4>
+    <span class="tab">Tổng quan</span><span class="tab">Data Lake (realtime)</span><span class="tab">Pipeline</span><span class="tab">Kho dữ liệu (OLAP)</span><span class="tab">Khai phá dữ liệu</span>
+  </div>
+</div></body></html>

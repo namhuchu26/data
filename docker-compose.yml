@@ -1,0 +1,116 @@
+# =====================================================================
+#  Amazon Reviews Sentiment - Data Platform
+#  MinIO (Data Lake) + PostgreSQL (Data Warehouse) + Airflow (ETL)
+#  + Portal (giao diện tổng hợp: Lake / Pipeline / Warehouse / Mining)
+#
+#  Chạy:   docker compose up -d --build
+#  Portal: http://localhost:8000
+#  MinIO:  http://localhost:9001   (minioadmin / minioadmin123)
+#  Airflow:http://localhost:8080   (admin / admin)
+# =====================================================================
+
+x-common-env: &common-env
+  MINIO_ENDPOINT: minio:9000
+  MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+  MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+  DW_URL: postgresql://${DW_USER}:${DW_PASSWORD}@postgres:5432/${DW_DB}
+  AMZ_CATEGORY: ${AMZ_CATEGORY}
+  SAMPLE_FRAC: ${SAMPLE_FRAC}
+
+services:
+  # ---------------- Data Lake: MinIO (S3-compatible) ----------------
+  # Image chính thức minio/minio đã ngừng phát hành trên Docker Hub/quay.io,
+  # nên dùng bản fork cộng đồng pgsty/minio (giữ nguyên API S3 + Console).
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    container_name: amz-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Console web
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------------- Data Warehouse + Airflow metadata ----------------
+  postgres:
+    image: postgres:16
+    container_name: amz-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DW_USER}
+      POSTGRES_PASSWORD: ${DW_PASSWORD}
+      POSTGRES_DB: ${DW_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/00_init_databases.sql:/docker-entrypoint-initdb.d/00_init_databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DW_USER} -d ${DW_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------------- Orchestration: Airflow 3 (standalone) ----------------
+  airflow:
+    build: ./airflow
+    image: amz-airflow:3.3.2
+    container_name: amz-airflow
+    command: standalone
+    ports:
+      - "8080:8080"
+    environment:
+      <<: *common-env
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "admin:admin"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: /opt/airflow/config/passwords.json
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
+      AIRFLOW__DAG_PROCESSOR__REFRESH_INTERVAL: "30"
+      PYTHONPATH: /opt/airflow/pipeline
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./pipeline:/opt/airflow/pipeline
+      - ./sql:/opt/airflow/sql:ro
+      - ./airflow/config/passwords.json:/opt/airflow/config/passwords.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  # ---------------- Portal: giao diện tổng hợp ----------------
+  portal:
+    build: ./portal
+    image: amz-portal:1.0
+    container_name: amz-portal
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *common-env
+      AIRFLOW_URL: http://airflow:8080
+      AIRFLOW_USER: admin
+      AIRFLOW_PASSWORD: admin
+      AIRFLOW_PUBLIC_URL: http://localhost:8080
+      MINIO_CONSOLE_URL: http://localhost:9001
+    volumes:
+      - ./portal:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+volumes:
+  minio_data:
+  postgres_data:

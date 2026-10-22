@@ -1,0 +1,7 @@
+minio
+pandas
+pyarrow
+requests
+psycopg2-binary
+scikit-learn
+nltk
