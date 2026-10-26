@@ -1,7 +1,7 @@
 # agent.md: Hồ sơ dự án (chỉ cần đọc file này là nắm được toàn bộ dự án)
 
-> **Cập nhật lần cuối:** 2026-10-22
-> **Trạng thái:** **hoàn thành toàn bộ phần kỹ thuật và tài liệu.** Hệ thống chạy trọn vẹn; đủ 3 mô hình (NB, LR, BiLSTM) có kết quả thật trên Portal và trong báo cáo `BaoCao_DoAn.docx` (32 trang); đề tài cập nhật ở `detai_capnhat.docx`. **Nhóm tự điền:** tên trường, khoa, GVHD, thành viên trên bìa và Bảng C.1 phân công. Slide: không làm (theo yêu cầu).
+> **Cập nhật lần cuối:** 2026-10-26
+> **Trạng thái:** **hoàn thành, dùng toàn bộ dữ liệu (100% danh mục All_Beauty, `SAMPLE_FRAC=1.0`).** Kho 691.806 review; 3 mô hình đánh giá trên cùng tập test 138.362 mẫu, **BiLSTM tốt nhất (Macro-F1 0,706)**. Portal, báo cáo `BaoCao_DoAn.docx` (32 trang) và file này đều đã chuyển sang số liệu 100% (có bảng so sánh với mẫu 15%). **Nhóm tự điền:** bìa và Bảng C.1 phân công. Slide: không làm.
 
 ---
 
@@ -21,7 +21,7 @@
 ## 1. Dự án là gì
 
 - **Đề tài:** *Xây dựng Data Pipeline Đa nguồn và Ứng dụng Học máy/Học sâu trong Khai phá Cảm xúc Đánh giá Sản phẩm Thương mại Điện tử* (bài tập cuối kỳ môn **Kho dữ liệu & Khai phá dữ liệu**, làm theo nhóm; đề cương gốc nằm trong `detai.docx`).
-- **Dữ liệu:** Amazon Reviews 2023 (McAuley Lab, UCSD), danh mục **All_Beauty**, cộng thêm tỷ giá USD→VND từ World Bank API.
+- **Dữ liệu:** Amazon Reviews 2023 (McAuley Lab, UCSD), **toàn bộ** danh mục **All_Beauty** (giai đoạn phát triển dùng mẫu 15%, bản cuối 100%), cộng thêm tỷ giá USD→VND từ World Bank API.
 - **Bài toán:** phân loại cảm xúc 3 lớp từ nội dung review: Tiêu cực (1–2★), Trung tính (3★), Tích cực (4–5★).
 - **Luồng tổng quát:** thu thập 3 nguồn → Data Lake (MinIO) → làm sạch, tích hợp, NLP → Kho dữ liệu (PostgreSQL, lược đồ hình sao) → mô hình ML (Naive Bayes, Logistic Regression) và DL (LSTM) → giao diện tổng hợp (Portal).
 
@@ -36,7 +36,7 @@
 | Không có dashboard | **Portal** tự viết (FastAPI + Chart.js), 5 tab | Thay cho Airflow UI, MinIO Console và Metabase |
 | NLTK + spaCy | Chỉ dùng **NLTK** (WordNet lemmatizer) + regex | Không dùng spaCy |
 | Star schema: Fact_Reviews, Dim_Product, Dim_User, Dim_Time | Giữ nguyên, thêm bảng `review_text` và `etl_load_log` | |
-| NB/LR baseline + LSTM | NB + LR (chạy trong Airflow); **BiLSTM** (notebook TensorFlow, đã train trên CPU máy cá nhân) | Macro-F1 0,649 |
+| NB/LR baseline + LSTM | NB + LR (chạy trong Airflow); **BiLSTM** (notebook TensorFlow, train trên Colab GPU) | BiLSTM tốt nhất, Macro-F1 0,706 |
 | Đánh giá bằng Accuracy, P, R, F1, Confusion Matrix | Thêm **Macro-F1** làm chỉ số chính (dữ liệu lệch lớp) | |
 
 ### 1.2. Các góp ý cho đề tài (2026-10-21) và tình trạng xử lý
@@ -44,7 +44,7 @@
 | Góp ý | Tình trạng |
 |---|---|
 | "Đa nguồn" yếu vì 2 nguồn cùng một bộ dữ liệu | ✅ Thêm World Bank API |
-| Dữ liệu quá lớn (khoảng 570 triệu review) | ✅ Chọn 1 danh mục (All_Beauty) + lấy mẫu 15% |
+| Dữ liệu quá lớn (khoảng 570 triệu review) | ✅ Chọn 1 danh mục (All_Beauty); lấy mẫu cấu hình được (`SAMPLE_FRAC`), bản cuối dùng 100% danh mục |
 | Mất cân bằng nhãn | ✅ `class_weight="balanced"`, chia tập có `stratify`, báo cáo Macro-F1 |
 | `sentiment_score` chưa rõ nguồn | ✅ Định nghĩa = P(tích cực) − P(tiêu cực) của LR, dự đoán **out-of-fold** |
 | Xóa stopword làm mất từ phủ định | ✅ Giữ not/no/never…; tách 2 phiên bản văn bản (TF-IDF / LSTM) |
@@ -64,14 +64,15 @@
 | Extract 3 nguồn vào Raw Zone (streaming) | ✅ Xong |
 | Transform: làm sạch, tích hợp, NLP, báo cáo chất lượng | ✅ Xong |
 | Load: Star Schema PostgreSQL | ✅ Xong |
-| ML baseline: Naive Bayes, Logistic Regression | ✅ Xong (Macro-F1 0,651 / 0,660) |
+| ML baseline: Naive Bayes, Logistic Regression | ✅ Xong (100%: Macro-F1 0,648 / 0,673) |
 | Điểm cảm xúc out-of-fold ghi ngược vào kho | ✅ Xong |
 | Portal 5 tab (realtime lake, pipeline, kho, khai phá) | ✅ Xong, kiểm tra cả giao diện sáng/tối và điện thoại |
 | Notebook LSTM | ✅ Code xong, đã chạy thử và chạy chính thức |
-| Train LSTM thật | ✅ Xong (2026-10-21, CPU local): Macro-F1 0,6492 — kết quả ở `notebooks/lstm_metrics.json` |
-| Đưa kết quả LSTM lên Portal (`curated/models/lstm/metrics.json`) và vào báo cáo | ✅ Xong (2026-10-22) |
-| Cập nhật đề tài | ✅ `detai_capnhat.docx` (giữ nguyên `detai.docx` gốc) |
-| Báo cáo cuối kỳ `BaoCao_DoAn.docx` | ✅ Hoàn chỉnh (2026-10-22, 32 trang, có kết quả BiLSTM và mục 7.7 thảo luận); nhóm tự điền bìa + bảng phân công |
+| Train LSTM thật | ✅ Xong: 100% dữ liệu trên Colab GPU (2026-10-25), **Macro-F1 0,7061** — `notebooks/lstm_metrics.json` |
+| Đưa kết quả LSTM lên Portal (`curated/models/lstm/metrics.json`) và vào báo cáo | ✅ Xong (bản 100%, 2026-10-25) |
+| Chuyển toàn bộ dự án sang 100% dữ liệu | ✅ Xong (2026-10-25): pipeline, Portal, báo cáo, agent.md |
+| Cập nhật đề tài | ✅ `detai_capnhat.docx` theo số liệu 100% (2026-10-26; giữ nguyên `detai.docx` gốc) |
+| Báo cáo cuối kỳ `BaoCao_DoAn.docx` | ✅ Hoàn chỉnh theo số liệu 100% (2026-10-25, 32 trang; có Bảng 7.5 so sánh 15% và 100%); nhóm tự điền bìa + bảng phân công |
 | Slide thuyết trình | ➖ Không làm (người dùng không yêu cầu) |
 | README hướng dẫn (gồm hướng dẫn MinIO) | ✅ Xong |
 | `huongdanchay.md` (hướng dẫn chạy từng bước) | ✅ Xong (2026-10-21) |
@@ -93,10 +94,10 @@
 | Kho dữ liệu + metadata Airflow | `postgres:16` | `amz-postgres` | 5432 | Kho: `dw` / `dw123`, DB `dwh`. Airflow: `airflow` / `airflow`, DB `airflow` |
 | Điều phối | build từ `apache/airflow:3.3.2` (Python 3.13), chế độ `standalone`, LocalExecutor | `amz-airflow` | 8080 | `admin` / `admin` (SimpleAuthManager) |
 | Portal | build từ `python:3.12-slim`; FastAPI, uvicorn, minio, psycopg2, httpx, pyarrow; frontend HTML/JS thuần + Chart.js 4.4.1 (CDN) | `amz-portal` | 8000 | – |
-| Học sâu | TensorFlow 2.21 / Keras (đã train trên CPU trong container `python:3.12-slim`; notebook cũng chạy được trên Colab GPU) | – | – | – |
+| Học sâu | TensorFlow / Keras; bản chính thức train trên **Google Colab GPU T4**; bản đối chứng train trên CPU (container `python:3.12-slim`) | – | – | – |
 
 - Volume dữ liệu: `cuoiki_minio_data`, `cuoiki_postgres_data` (bị xóa khi chạy `docker compose down -v`).
-- Đã đo thực tế: cả hệ thống dùng khoảng **3 GB RAM** lúc cao điểm (Airflow 2,8 GB khi train mô hình). Image Airflow nặng 3,35 GB, Portal 521 MB, Postgres 642 MB, MinIO 216 MB.
+- Đã đo thực tế (cấu hình 15%): cả hệ thống dùng khoảng **3 GB RAM** lúc cao điểm (Airflow 2,8 GB khi train mô hình). Cấu hình 100% chạy thành công trong giới hạn 7,6 GB của Docker (chưa đo đỉnh RAM). Image Airflow nặng 3,35 GB, Portal 521 MB, Postgres 642 MB, MinIO 216 MB.
 
 ---
 
@@ -113,7 +114,7 @@ cuoiki/
 ├── detai.docx                  # đề cương gốc (giữ nguyên)
 ├── detai_capnhat.docx          # đề cương cập nhật theo kiến trúc đã làm (3 nguồn, MinIO, Airflow, Portal, BiLSTM, Macro-F1)
 ├── docker-compose.yml          # 4 dịch vụ: minio, postgres, airflow, portal
-├── .env                        # tài khoản, AMZ_CATEGORY=All_Beauty, SAMPLE_FRAC=0.15, JWT secret Airflow
+├── .env                        # tài khoản, AMZ_CATEGORY=All_Beauty, SAMPLE_FRAC=1.0 (bản cuối; 0.15 khi phát triển), JWT secret Airflow
 ├── airflow/
 │   ├── Dockerfile              # airflow 3.3.2 + requirements + tải NLTK wordnet/omw-1.4
 │   ├── requirements.txt        # minio, pandas, pyarrow, requests, psycopg2-binary, scikit-learn, nltk
@@ -135,7 +136,9 @@ cuoiki/
 │   └── static/                 # index.html, style.css, app.js (5 tab, Chart.js, SSE realtime)
 └── notebooks/
     ├── train_lstm_colab.ipynb  # BiLSTM -> metrics.json (chạy trên máy hoặc Colab)
-    └── lstm_metrics.json       # kết quả BiLSTM chính thức (bản sao của curated/models/lstm/metrics.json)
+    ├── lstm_metrics.json       # kết quả BiLSTM chính thức: 100%, Colab GPU (bản sao của curated/models/lstm/metrics.json)
+    ├── lstm_metrics_cpu_100pct.json  # đối chứng: 100%, CPU máy (Macro-F1 0,7042)
+    └── lstm_metrics_15pct.json # kết quả cũ trên mẫu 15% (Macro-F1 0,6492)
 ```
 
 ---
@@ -156,21 +159,20 @@ Lưu ý: trong metadata bản 2023, `brand` không phải trường cấp 1 (n�
 
 Mỗi zone là một bucket. Bucket được tạo tự động bởi pipeline (`lake.ensure_buckets`) và Portal.
 
-| Bucket | Object (sau lần chạy 2026-10-21) | Kích thước |
+| Bucket | Object (cấu hình 100%, 2026-10-25) | Kích thước |
 |---|---|---|
 | `raw/` | `amazon/reviews/All_Beauty/ingest_date=YYYY-MM-DD/All_Beauty.jsonl.gz` (metadata `x-amz-meta-source-url`) | 90,1 MB |
 | | `amazon/meta/All_Beauty/ingest_date=YYYY-MM-DD/meta_All_Beauty.jsonl.gz` | 38,0 MB |
 | | `worldbank/usd_vnd/ingest_date=YYYY-MM-DD/PA.NUS.FCRF_HHMMSS.json` | 7,9 KB |
-| `staging/` | `amazon/All_Beauty/reviews_clean.parquet` | 32,8 MB |
-| | `amazon/All_Beauty/products_clean.parquet` | 4,1 MB |
+| `staging/` | `amazon/All_Beauty/reviews_clean.parquet` | 212,8 MB |
+| | `amazon/All_Beauty/products_clean.parquet` | 10,4 MB |
 | | `worldbank/fx_usd_vnd.parquet` | 2 KB |
 | | `_reports/quality_YYYYMMDD_HHMMSS.json` (báo cáo chất lượng mỗi lần chạy) | <1 KB |
-| `curated/` | `ml/All_Beauty/sentiment_dataset.parquet` (có cột `split` train/test) | 16,2 MB |
-| | `ml/All_Beauty/predictions_oof.parquet` | 0,9 MB |
-| | `models/naive_bayes/metrics.json`, `models/logistic_regression/metrics.json` | |
-| | `models/lstm/metrics.json` (BiLSTM, upload qua Portal ngày 2026-10-22) | 1,4 KB |
+| `curated/` | `ml/All_Beauty/sentiment_dataset.parquet` (có cột `split` train/test) | 104,8 MB |
+| | `ml/All_Beauty/predictions_oof.parquet` | 4,4 MB |
+| | `models/naive_bayes/`, `models/logistic_regression/`, `models/lstm/` (mỗi thư mục một `metrics.json`) | < 4 KB |
 
-- Raw được phân vùng theo ngày nạp. Extract **bỏ qua** việc tải nếu trong ngày đã có object cùng dung lượng.
+- Raw được phân vùng theo ngày nạp (theo giờ UTC của container). Extract **bỏ qua** việc tải nếu trong ngày đã có object cùng dung lượng; raw đang có nhiều bản theo các ngày đã chạy.
 - Từ host dùng `localhost:9000`; từ container khác trong compose dùng `minio:9000`.
 
 ---
@@ -187,24 +189,24 @@ extract.extract_fx       ─┘                                                 
 - `DAGS_ARE_PAUSED_AT_CREATION=False`, nên **DAG tự chạy một lần ngay khi hệ thống khởi động**.
 - Các task import `amz.*` bên trong hàm, nên sửa code trong `pipeline/amz/` thì lần chạy sau dùng code mới, không cần build lại image.
 
-| Task | Việc làm | Thời gian (lần dựng lại từ đầu, 2026-10-21) | XCom trả về |
-|---|---|---|---|
-| `extract_reviews` | Stream file gz vào `raw/` | 110 s | `{key, bytes, skipped}` |
-| `extract_metadata` | Như trên | 74 s | như trên |
-| `extract_fx` | Gọi World Bank API, ghi JSON vào `raw/` | 10,5 s | `{key, years}` |
-| `transform` | Xem §8 | 19,3 s | `{reviews_clean, products, users}` |
-| `load_warehouse` | Tạo schema, TRUNCATE, `COPY` vào 5 bảng, ghi log | 9,3 s | số dòng mỗi bảng |
-| `build_dataset` | Trích dữ liệu từ kho, chia 80/20 có stratify (seed 42) → `curated/` | 3,2 s | `{rows, train, test}` |
-| `train_baselines` | TF-IDF + NB + LR → `metrics.json` | 76,7 s | accuracy và f1_macro từng mô hình |
-| `score_reviews` | 5-fold `cross_val_predict` (LR) → điểm cảm xúc, ghi vào `fact_reviews` | 105 s | `{scored, oof_accuracy}` |
+| Task | Việc làm | 15%, dựng lại từ đầu (21/10) | **100%** (`manual__2026-10-25T08:13:25`) | XCom trả về |
+|---|---|---|---|---|
+| `extract_reviews` | Stream file gz vào `raw/` | 110 s | 6,9 s (file đã có) | `{key, bytes, skipped}` |
+| `extract_metadata` | Như trên | 74 s | 6,6 s (file đã có) | như trên |
+| `extract_fx` | Gọi World Bank API, ghi JSON vào `raw/` | 10,5 s | 6,1 s | `{key, years}` |
+| `transform` | Xem §8 | 19,3 s | 42,1 s | `{reviews_clean, products, users}` |
+| `load_warehouse` | Tạo schema, TRUNCATE, `COPY` vào 5 bảng, ghi log | 9,3 s | 53,0 s | số dòng mỗi bảng |
+| `build_dataset` | Trích dữ liệu từ kho, chia 80/20 có stratify (seed 42) → `curated/` | 3,2 s | 7,6 s | `{rows, train, test}` |
+| `train_baselines` | TF-IDF + NB + LR → `metrics.json` | 76,7 s | 269,1 s | accuracy và f1_macro từng mô hình |
+| `score_reviews` | 5-fold `cross_val_predict` (LR) → điểm cảm xúc, ghi vào `fact_reviews` | 105 s | 482,4 s | `{scored, oof_accuracy}` |
 
-**Tổng thời gian khoảng 4 phút 20 giây**; cả 8 task thành công ngay lần thử đầu. Kết quả tái lập được (cùng seed cho ra cùng số liệu).
+**Tổng thời gian:** 15% khoảng 4 phút 20 giây (có tải dữ liệu); **100% khoảng 10 phút** (không tính tải). Cả 8 task thành công ngay lần thử đầu. Kết quả tái lập được (cùng seed cho ra cùng số liệu).
 
 ---
 
 ## 8. Làm sạch và tiền xử lý (`transform.py`)
 
-1. **Lấy mẫu khi đọc tuần tự** (không nạp cả file vào RAM): giữ mỗi dòng với xác suất `SAMPLE_FRAC=0.15`, `random.Random(42)`.
+1. **Lấy mẫu khi đọc tuần tự** (không nạp cả file vào RAM): giữ mỗi dòng với xác suất `SAMPLE_FRAC`, `random.Random(42)`. **Bản cuối `SAMPLE_FRAC=1.0` (giữ toàn bộ)**; giai đoạn phát triển dùng 0.15.
 2. **Làm sạch cấu trúc:** bỏ dòng thiếu `rating/text/parent_asin/user_id/timestamp`; giữ rating trong khoảng 1–5; bỏ trùng theo (`user_id`, `parent_asin`, `timestamp`); `timestamp` ms → datetime; `helpful_vote` null → 0; `verified_purchase` null → False.
 3. **NLP:**
    - `text_light` (cho LSTM): `html.unescape`, bỏ thẻ HTML và URL, chuyển chữ thường, đổi `n't` thành ` not`, bỏ ký tự không phải chữ cái, gộp khoảng trắng.
@@ -214,50 +216,59 @@ extract.extract_fx       ─┘                                                 
 5. **Nguồn 3:** `price_vnd = price_usd × tỷ giá năm 2023` (23.787,32, làm tròn đến trăm đồng), vì giá trong metadata là ảnh chụp năm 2023. Phân khúc giá: `< 200K`, `200K - 500K`, `500K - 1 triệu`, `1 - 2 triệu`, `> 2 triệu`, `Không rõ`.
 6. **Tích hợp:** review LEFT JOIN metadata theo `parent_asin`; sản phẩm thiếu metadata được thêm dòng "Unknown" (lần chạy này: 0 sản phẩm).
 
-**Báo cáo chất lượng (lần chạy 2026-10-21):** đọc 701.528 review → lấy mẫu 105.332 → bỏ 0 do thiếu giá trị, 0 do rating sai, 160 trùng, 395 văn bản rỗng → **104.777 review sạch**; 41.314 sản phẩm (0 thiếu metadata; **82,16% thiếu giá**; 8,73% không rõ thương hiệu); 102.358 người dùng; review từ 2001-01-30 đến 2023-09-09. Phân bố nhãn: tích cực 74.707 (71,3%), tiêu cực 21.658 (20,7%), trung tính 8.412 (8,0%).
+**Báo cáo chất lượng (100%, lần chạy 2026-10-25):** đọc 701.528 review → giữ 701.528 → bỏ 0 do thiếu giá trị, 0 do rating sai, **7.276 trùng**, **2.446 văn bản rỗng** → **691.806 review sạch**; 112.385 sản phẩm (0 thiếu metadata; **84,28% thiếu giá**; 9,94% không rõ thương hiệu); 629.831 người dùng; review từ **2000-11-01** đến 2023-09-09. Phân bố nhãn: tích cực 493.060 (71,3%), tiêu cực 143.138 (20,7%), trung tính 55.608 (8,0%).
+
+*(Mẫu 15% cũ, 2026-10-21: lấy 105.332 → 104.777 sạch; 41.314 sản phẩm; 102.358 người dùng.)*
 
 ---
 
 ## 9. Kho dữ liệu PostgreSQL (DB `dwh`, Star Schema)
 
-| Bảng | Khóa | Cột chính | Số dòng |
+| Bảng | Khóa | Cột chính | Số dòng (100%) |
 |---|---|---|---|
-| `fact_reviews` | `review_key` (PK), FK `product_key`, `user_key`, `time_key` | `rating, sentiment_label` (theo rating), `sentiment_score` (−1..1), `sentiment_pred`, `helpful_vote, verified_purchase, text_length, word_count` | 104.777 |
-| `dim_product` | `product_key` | `parent_asin` (unique), `title, brand, store, main_category, categories, price_usd, price_vnd, price_segment, average_rating, rating_number` | 41.314 |
-| `dim_user` | `user_key` | `user_id` (unique), `review_count` (tính trong mẫu), `first_review_date` | 102.358 |
-| `dim_time` | `time_key` = yyyymmdd | `full_date, day, month, quarter, year, year_month, day_of_week` (0 = Thứ Hai), `usd_vnd_rate` (tỷ giá năm gần nhất) | 5.041 |
-| `review_text` | `review_key` (PK/FK) | `title, text_raw, text_clean, text_light` | 104.777 |
+| `fact_reviews` | `review_key` (PK), FK `product_key`, `user_key`, `time_key` | `rating, sentiment_label` (theo rating), `sentiment_score` (−1..1), `sentiment_pred`, `helpful_vote, verified_purchase, text_length, word_count` | 691.806 |
+| `dim_product` | `product_key` | `parent_asin` (unique), `title, brand, store, main_category, categories, price_usd, price_vnd, price_segment, average_rating, rating_number` | 112.385 |
+| `dim_user` | `user_key` | `user_id` (unique), `review_count`, `first_review_date` | 629.831 |
+| `dim_time` | `time_key` = yyyymmdd | `full_date, day, month, quarter, year, year_month, day_of_week` (0 = Thứ Hai), `usd_vnd_rate` (tỷ giá năm gần nhất) | 6.557 |
+| `review_text` | `review_key` (PK/FK) | `title, text_raw, text_clean, text_light` | 691.806 |
 | `etl_load_log` | `id` | `run_id, loaded_at` và số dòng từng bảng | 1 dòng mỗi lần nạp |
 
 - Nạp kiểu **full refresh** (TRUNCATE … CASCADE rồi `COPY`), nên chạy lại DAG nhiều lần vẫn cho kết quả như nhau.
-- **Một số kết quả từ kho (2026-10-21):** rating trung bình 3,961; 71,3% tích cực; điểm cảm xúc trung bình 0,374; 90,38% đã xác thực mua hàng. Review đã xác thực có rating TB **3,95** (94.694 review), chưa xác thực **4,07** (10.083 review). Rating TB theo phân khúc giá: <200K 3,97 · 200–500K 4,13 · 500K–1tr 4,18 · 1–2tr 4,24 · >2tr 4,04 · Không rõ 3,91 (76.936 review). Thương hiệu nhiều review nhất: PHILIPS (472), Segbeauty (411), Lume (354).
+- **Kết quả từ kho (100%, 2026-10-25):** rating trung bình 3,96; 71,3% tích cực; điểm cảm xúc trung bình 0,380; 90,51% đã xác thực mua hàng. 5★ chiếm 414.655 review (60%). Đỉnh số review: tháng 3/2021 (13.885). Review đã xác thực có rating TB **3,95** (626.122 review), chưa xác thực **4,08** (65.684 review). Rating TB theo phân khúc giá: <200K 3,96 (33.587) · 200–500K 4,12 (88.345) · 500K–1tr 4,17 (44.583) · 1–2tr 4,24 (11.186) · >2tr 4,08 (5.254) · Không rõ 3,91 (508.851). Thương hiệu nhiều review nhất: PHILIPS (2.938), Segbeauty (2.761), SALUX (2.167). Các xu hướng giống mẫu 15% → mẫu ngẫu nhiên đại diện tốt.
 
 ---
 
 ## 10. Khai phá dữ liệu (`mining.py`)
 
-- **Tập dữ liệu:** trích từ kho (`fact_reviews` JOIN `review_text`), chia train/test 80/20 phân tầng (seed 42): **83.821 train / 20.956 test**. Tập test này dùng chung cho mọi mô hình, kể cả LSTM.
+- **Tập dữ liệu:** trích từ kho (`fact_reviews` JOIN `review_text`), chia train/test 80/20 phân tầng (seed 42): **553.444 train / 138.362 test** (test: tiêu cực 28.628 / trung tính 11.122 / tích cực 98.612). Tập test dùng chung cho cả 3 mô hình.
 - **Đặc trưng:** TF-IDF trên `text_clean`, n-gram (1,2), `min_df=3`, `max_features=50.000`, `sublinear_tf=True`.
-- **Mô hình:**
-  - `MultinomialNB(alpha=0.3, fit_prior=False)`
-  - `LogisticRegression(max_iter=2000, C=2.0, class_weight="balanced")`
+- **Mô hình:** `MultinomialNB(alpha=0.3, fit_prior=False)`; `LogisticRegression(max_iter=2000, C=2.0, class_weight="balanced")`; BiLSTM (xem §11).
 
-| Mô hình | Accuracy | Precision (macro) | Recall (macro) | **F1 (macro)** | F1 (weighted) | Thời gian train |
-|---|---|---|---|---|---|---|
-| Multinomial Naive Bayes | 0,8066 | 0,6334 | 0,6790 | **0,6506** | 0,8195 | 0,3 s |
-| Logistic Regression | 0,8159 | 0,6472 | 0,6833 | **0,6595** | 0,8297 | 67,1 s |
-| BiLSTM | 0,7566 | 0,6559 | 0,7248 | **0,6492** | 0,7971 | 4.606 s (CPU, 4 epoch) |
+**Kết quả 100% (2026-10-25):**
 
-F1 theo lớp (NB / LR / BiLSTM): Tiêu cực 0,744 / 0,750 / 0,742 · **Trung tính 0,309 / 0,318 / 0,342** · Tích cực 0,899 / 0,910 / 0,865. BiLSTM theo lớp (P / R): tiêu cực 0,763 / 0,721; trung tính 0,228 / **0,677**; tích cực 0,976 / 0,776. Số mẫu test mỗi lớp: 4.332 / 1.682 / 14.942.
+| Mô hình | Accuracy | Precision (macro) | Recall (macro) | **F1 (macro)** | F1 (weighted) | F1 tiêu cực / trung tính / tích cực | Thời gian train |
+|---|---|---|---|---|---|---|---|
+| Multinomial Naive Bayes | 0,7702 | 0,6463 | 0,7065 | 0,6480 | 0,8032 | 0,733 / 0,335 / 0,876 | 5,2 s |
+| Logistic Regression | 0,8112 | 0,6640 | 0,7122 | 0,6732 | 0,8328 | 0,761 / 0,351 / 0,908 | 204 s |
+| **BiLSTM** | **0,8264** | **0,7015** | **0,7610** | **0,7061** | **0,8509** | **0,794 / 0,406 / 0,917** | 175 s (Colab GPU) |
 
-Ma trận nhầm lẫn (hàng = nhãn thật, cột = dự đoán; thứ tự tiêu cực, trung tính, tích cực):
-- NB: `[[3489, 545, 298], [636, 633, 413], [928, 1233, 12781]]`
-- LR: `[[3335, 718, 279], [563, 680, 439], [660, 1198, 13084]]`
-- BiLSTM: `[[3125, 1087, 120], [379, 1139, 164], [591, 2760, 11591]]` — nhận đúng 68% review trung tính (LR: 40%) nhưng kéo 2.760 review tích cực sang trung tính, nên accuracy thấp hơn.
-- **Kết luận so sánh:** LR tốt nhất về Macro-F1/Accuracy; BiLSTM tốt nhất về Recall macro (0,725) và lớp Trung tính; NB nhanh nhất.
+Ma trận nhầm lẫn 100% (hàng = nhãn thật, cột = dự đoán; thứ tự tiêu cực, trung tính, tích cực):
+- NB: `[[20740, 6616, 1272], [2845, 6579, 1698], [4381, 14990, 79241]]`
+- LR: `[[21621, 5734, 1273], [3206, 5797, 2119], [3397, 10390, 84825]]` — trung tính đúng 52%.
+- BiLSTM: `[[21700, 6172, 756], [2477, 7340, 1305], [1824, 11484, 85304]]` — trung tính đúng 66%, Precision trung tính 0,294.
 
-- **Từ khóa quyết định (hệ số LR):** tiêu cực: *worst, not worth, disappoint, return, not recommend*; trung tính: *not, okay, hop, kind, not worst* ("hop" là lỗi lemmatize của *hope/hoping*, hạn chế của WordNet); tích cực: *love, amaze, perfect, great, not disappoint*. Mô hình học được cụm có phủ định, nhờ giữ lại từ "not".
-- **Điểm cảm xúc:** `sentiment_score = P(pos) − P(neg)` lấy từ dự đoán **out-of-fold 5-fold** (pipeline TF-IDF + LR), nên mỗi review được chấm bởi mô hình chưa từng thấy nó. Accuracy out-of-fold 0,8153. Kết quả ghi vào `fact_reviews.sentiment_score` và `sentiment_pred`.
+**So sánh theo lượng dữ liệu (Macro-F1):**
+
+| Mô hình | Mẫu 15% (test 20.956) | 100% (test 138.362) | Thay đổi |
+|---|---|---|---|
+| Naive Bayes | 0,6506 | 0,6480 | −0,003 |
+| Logistic Regression | 0,6595 | 0,6732 | +0,014 |
+| BiLSTM | 0,6492 | **0,7061** | **+0,057** |
+
+→ Với 15%, LR tốt nhất; với 100%, **BiLSTM tốt nhất ở mọi chỉ số**: học sâu cần nhiều dữ liệu mới vượt TF-IDF.
+
+- **Từ khóa quyết định (hệ số LR, 100%):** tiêu cực: *not recommend, worst, disappoint, not worth, not happy*; trung tính: *not worst, not, not amaze, better worse, not best*; tích cực: *not disappoint, perfect, best, amaze, great*. Rất nhiều cụm phủ định → giữ "not" là đúng. (Lemmatizer WordNet đôi khi cắt sai, ví dụ *hoping* → *hop*.)
+- **Điểm cảm xúc:** `sentiment_score = P(pos) − P(neg)` từ dự đoán **out-of-fold 5-fold** (TF-IDF + LR); accuracy OOF trên 691.806 review = **0,8112**. Ghi vào `fact_reviews.sentiment_score` và `sentiment_pred`.
 - **Định dạng `metrics.json`** (Portal đọc theo đúng định dạng này): `model, display_name, family, trained_at, labels, accuracy, precision_macro, recall_macro, f1_macro, f1_weighted, per_class{label:{precision, recall, f1, support}}, confusion_matrix, n_train, n_test, train_seconds`; tùy chọn thêm `top_terms`, `history` (loss theo epoch), `quick_test`.
 
 ---
@@ -266,7 +277,10 @@ Ma trận nhầm lẫn (hàng = nhãn thật, cột = dự đoán; thứ tự ti
 
 - **Quy trình:** Portal → Data Lake → tải `curated/ml/All_Beauty/sentiment_dataset.parquet` → mở notebook trên Colab (runtime GPU) → *Run all* → tải `metrics.json` về → Portal → Data Lake → upload vào bucket `curated`, prefix `models/lstm`. Tab Khai phá sẽ tự so sánh với NB và LR.
 - **Mô hình:** `TextVectorization` (30.000 từ, độ dài chuỗi 150, `standardize=None` trên `text_light`) → `Embedding(30000, 128, mask_zero=True)` → `Bidirectional(LSTM(64))` → Dropout 0,3 → Dense 64 ReLU → Dropout 0,3 → Dense 3 softmax. Adam 1e-3, batch 256, tối đa 8 epoch, `EarlyStopping(val_loss, patience=2, restore_best_weights)`, `class_weight="balanced"`, 10% tập train làm validation. Khoảng 3,95 triệu tham số.
-- **Tình trạng: đã train chính thức** (2026-10-21) bằng TensorFlow 2.21 CPU trong container, chạy đúng code notebook với `QUICK_TEST=False`: 75.438 mẫu train, EarlyStopping dừng sau 4 epoch (giữ trọng số epoch 2), 4.606 s (~77 phút, chỉ dùng ~1 nhân CPU). Loss train 0,746→0,572→0,485→0,417; val_loss 0,599→**0,571**→0,595→0,740 (quá khớp sau epoch 2). Test: Accuracy 0,7566, **Macro-F1 0,6492**. Kết quả ở `notebooks/lstm_metrics.json` và trên Portal. Nếu file `metrics.json` có `quick_test: true`, Portal sẽ gắn nhãn "(chạy thử)".
+- **Bản chính thức (100%, 2026-10-25): Google Colab GPU T4**, notebook không sửa: 498.099 mẫu train, EarlyStopping dừng sau 4 epoch (giữ trọng số epoch 2), **174,7 s**. Loss train 0,628→0,535→0,481→0,431; val_loss 0,460→**0,445**→0,477→0,500. Test 138.362 mẫu: Accuracy 0,8264, **Macro-F1 0,7061**. File: `notebooks/lstm_metrics.json` = `curated/models/lstm/metrics.json`.
+- **Bản đối chứng CPU (100%)**: chạy song song trong container trên máy, ~645 s/epoch, train 2.625,5 s (~44 phút, chậm hơn Colab ~15 lần), Accuracy 0,8235, Macro-F1 0,7042 (gần trùng bản GPU). File: `notebooks/lstm_metrics_cpu_100pct.json`.
+- **Bản cũ (15%, 2026-10-21, CPU)**: 75.438 mẫu train, 77 phút, Macro-F1 0,6492. File: `notebooks/lstm_metrics_15pct.json`.
+- Nếu file `metrics.json` có `quick_test: true`, Portal sẽ gắn nhãn "(chạy thử)".
 
 ---
 
@@ -276,7 +290,7 @@ Ma trận nhầm lẫn (hàng = nhãn thật, cột = dự đoán; thứ tự ti
 |---|---|---|
 | Tổng quan | 6 chỉ số chính, luồng 5 bước có số liệu thật, lần chạy DAG gần nhất, báo cáo chất lượng mới nhất, sự kiện Data Lake mới nhất | 20 s |
 | Data Lake | 3 zone (số object, dung lượng, lần cập nhật), duyệt và lọc object, xem trước (jsonl.gz / parquet kèm schema / json), tải về, tải lên. **Sự kiện realtime** qua MinIO Bucket Notification và SSE | Ngay khi có sự kiện |
-| Pipeline | Thông tin DAG, công tắc bật/tắt lịch, nút ▶ Chạy ngay, sơ đồ task tô màu theo trạng thái, danh sách lần chạy, bảng task có thanh thời lượng, xem log (kèm traceback) và XCom | 4 s khi đang chạy, 15 s khi rảnh |
+| Pipeline | Thông tin DAG, công tắc bật/tắt lịch, nút ▶ Chạy ngay (tự khóa thành "Đang chạy…" khi có lần chạy queued/running; backend trả 409 nếu bấm trùng), sơ đồ task tô màu theo trạng thái, danh sách lần chạy, bảng task có thanh thời lượng, xem log (kèm traceback) và XCom | 4 s khi đang chạy, 15 s khi rảnh |
 | Kho dữ liệu | Sơ đồ hình sao kèm số dòng; 8 biểu đồ (review theo tháng, rating TB theo tháng, phân bố sao, nhãn theo năm, top thương hiệu, rating theo phân khúc giá, theo thứ trong tuần, tỷ giá); xác thực mua hàng; top 10 sản phẩm; **ô SQL chỉ đọc** kèm 6 truy vấn mẫu (roll-up, drill-down, slice, dice…) | 30 s |
 | Khai phá dữ liệu | So sánh mô hình, F1 theo lớp, histogram điểm cảm xúc theo nhãn thật, ma trận nhầm lẫn, từ khóa quyết định, phần LSTM (hướng dẫn hoặc biểu đồ loss), phân tích review bị dự đoán sai | 30 s |
 
@@ -318,21 +332,22 @@ docker exec -it amz-postgres psql -U dw -d dwh
 - **Macro-F1 là chỉ số chính** vì dữ liệu lệch lớp (71% tích cực).
 - **Điểm cảm xúc tính out-of-fold** để tránh rò rỉ dữ liệu (mô hình tự chấm dữ liệu đã học).
 - **Giá quy đổi bằng tỷ giá 2023** vì giá trong metadata là ảnh chụp năm 2023. Tỷ giá theo năm trong `dim_time` dùng cho phân tích theo thời gian.
-- **LSTM train ngoài Airflow** (notebook chạy trên máy hoặc Colab), vì nặng và cần TensorFlow; kết quả đưa về lake bằng `metrics.json`. Lần chính thức chạy trên CPU máy cá nhân (Colab GPU sẽ nhanh hơn nhiều).
+- **LSTM train ngoài Airflow** (notebook chạy trên máy hoặc Colab), vì nặng và cần TensorFlow; kết quả đưa về lake bằng `metrics.json`. Bản chính thức chạy trên Colab GPU (nhanh hơn CPU máy khoảng 15 lần, kết quả gần trùng).
+- **Bản cuối dùng 100% danh mục** (`SAMPLE_FRAC=1.0`): pipeline ~10 phút, vẫn vừa giới hạn RAM Docker; giúp BiLSTM vượt LR.
 - **Portal tự viết thay cho Metabase**, để gom Lake, Pipeline, Kho và Khai phá vào một chỗ. Nếu thầy cô bắt buộc dùng Metabase, có thể cho Metabase kết nối thẳng vào database `dwh`.
 
 ---
 
 ## 15. Hạn chế và vấn đề đã biết
 
-- Lớp **Trung tính** rất khó (F1 khoảng 0,31); nhầm nhiều sang hai lớp còn lại.
-- **82% sản phẩm thiếu giá**, nên phân tích theo giá chỉ dựa trên khoảng 27% review.
-- Do lấy mẫu 15%, gần như mỗi người dùng chỉ có 1 review (102.358 người dùng / 104.777 review), nên phân tích theo người dùng còn yếu.
+- Lớp **Trung tính** vẫn khó nhất (F1 0,34–0,41); BiLSTM Precision lớp này chỉ 0,294.
+- **84% sản phẩm thiếu giá**, nên phân tích theo giá chỉ dựa trên khoảng 26% review.
+- Gần như mỗi người dùng chỉ có 1 review (629.831 người dùng / 691.806 review), nên phân tích theo người dùng còn yếu.
 - Lịch `@daily` **tải lại 134 MB mỗi ngày** vào phân vùng `ingest_date` mới, nên raw tăng dần; chưa có chính sách dọn dữ liệu cũ (tắt lịch được trong Portal).
 - Lịch sử sự kiện realtime của Portal chỉ lưu trong bộ nhớ, mất khi Portal khởi động lại.
 - Portal tải Chart.js từ CDN, nên cần Internet. Portal chạy uvicorn `--reload` (chế độ dev).
 - Tài khoản đều là mặc định local (xem §3), cần đổi nếu đưa lên môi trường thật.
-- BiLSTM: train CPU lâu (~77 phút), quá khớp sau epoch 2, Precision lớp Trung tính thấp (0,228).
+- BiLSTM cần GPU (CPU máy ~44 phút cho 100%, ~15 lần chậm hơn Colab), bắt đầu quá khớp sau epoch 2.
 - Lemmatizer WordNet đôi khi cắt sai (ví dụ *hoping* thành *hop*), ảnh hưởng nhẹ tới TF-IDF.
 
 ---
@@ -354,6 +369,26 @@ docker exec -it amz-postgres psql -U dw -d dwh
 ---
 
 ## 18. Nhật ký thay đổi (mới nhất ở trên)
+
+### 2026-10-26
+- `detai_capnhat.docx`: sửa đoạn "Quy mô và lấy mẫu" sang toàn bộ danh mục (701.528 → 691.806 review sau làm sạch; mẫu 15% chỉ dùng khi phát triển) và môi trường học sâu là Google Colab GPU. Đã mở thử bằng Word (3 trang).
+- Portal chống bấm trùng **▶ Chạy ngay**: frontend khóa nút ("Đang chạy…") khi lần chạy gần nhất đang queued/running; backend `POST /api/pipeline/trigger` kiểm tra Airflow và trả **HTTP 409** nếu đã có lần chạy hoạt động. Đã kiểm thử: trong lúc DAG tự chạy `scheduled__2026-10-26T00:00:00`, 2 lần bấm đều bị từ chối, không tạo lần chạy trùng.
+- Commit toàn bộ dự án vào git (trước đó repo mới có 1 commit `hello`).
+
+### 2026-10-25
+- **Chuyển toàn bộ tài liệu sang số liệu 100%:** `BaoCao_DoAn.docx` (32 trang; cập nhật chương 1, 3–7, 9, Kết luận; thêm Bảng 7.5 so sánh 15%/100%; chụp lại 14 hình từ Portal), `agent.md` (§1–§11, §14, §15), `README.md`, `huongdanchay.md`. Bản BiLSTM CPU 100% đã xong: Macro-F1 0,7042, train 2.625,5 s → lưu `notebooks/lstm_metrics_cpu_100pct.json` (không đưa lên Portal).
+- **BiLSTM train lại trên 100% dữ liệu bằng Google Colab (GPU T4)**, cùng notebook, không đổi code: 498.099 mẫu train, 4 epoch (EarlyStopping, giữ trọng số epoch 2: val_loss 0,4451), **174,7 s**. Đã upload lên `curated/models/lstm/metrics.json`; bản cũ 15% giữ ở `notebooks/lstm_metrics_15pct.json`, bản mới ở `notebooks/lstm_metrics.json`. Bản train song song trên CPU máy (container `amz-lstm-train`) chạy ~645 s/epoch (Colab nhanh hơn ~15 lần), không dùng để báo cáo.
+- **Kết quả 3 mô hình trên 100% dữ liệu** (cùng tập test 138.362 mẫu: tiêu cực 28.628 / trung tính 11.122 / tích cực 98.612):
+
+  | Mô hình | Accuracy | P macro | R macro | **F1 macro** | F1 weighted | F1 tiêu cực / trung tính / tích cực | Thời gian train |
+  |---|---|---|---|---|---|---|---|
+  | Naive Bayes | 0,7702 | 0,6463 | 0,7065 | 0,6480 | 0,8032 | 0,733 / 0,335 / 0,876 | 5,2 s |
+  | Logistic Regression | 0,8112 | 0,6640 | 0,7122 | 0,6732 | 0,8328 | 0,761 / 0,351 / 0,908 | 204 s |
+  | **BiLSTM** | **0,8264** | **0,7015** | **0,7610** | **0,7061** | **0,8509** | **0,794 / 0,406 / 0,917** | 175 s (GPU) |
+
+  **Kết luận mới:** với 15% dữ liệu LR tốt nhất (BiLSTM 0,649 < LR 0,660); với 100% dữ liệu **BiLSTM tốt nhất ở mọi chỉ số** (Macro-F1 0,706 so với LR 0,673) → học sâu cần nhiều dữ liệu mới vượt TF-IDF. ⚠️ §8–§10 và `BaoCao_DoAn.docx` vẫn ghi số liệu 15% → cần cập nhật.
+- **Chuyển sang lấy 100% dữ liệu** (người dùng tự đổi `SAMPLE_FRAC=1.0` trong `.env`, `docker compose up -d`, chạy DAG `manual__2026-10-25T08:13:25` → thành công, khoảng 10 phút). Kho mới: **691.806 review**, 112.385 sản phẩm, 629.831 người dùng, 6.557 ngày; tập ML 553.444 train / 138.362 test. Kết quả mới: **NB Accuracy 0,7702, Macro-F1 0,648; LR Accuracy 0,8112, Macro-F1 0,6732**. ⚠️ Các số liệu 15% ở §8–§10 và trong `BaoCao_DoAn.docx` giờ là số liệu CŨ, cần cập nhật. BiLSTM trên Portal vẫn là bản train trên 15% (tập test khác) → đang train lại BiLSTM trên dữ liệu 100% bằng TensorFlow CPU (container `amz-lstm-train`, log ở scratchpad), chưa có kết quả.
+- Chạy lại toàn bộ dự án: `docker compose up -d`, health OK; DAG tự chạy khi khởi động → **8/8 task thành công** (extract ~1–2 s vì file trong ngày đã có; transform 18,3 s, load 9,7 s, train_baselines 130 s, score_reviews 186 s). Số liệu không đổi: 104.777 review; Macro-F1 NB 0,6506 / LR 0,6595 / BiLSTM 0,6492.
 
 ### 2026-10-22
 - Chạy lại dự án theo yêu cầu: 4 container `amz-*` hoạt động, health OK; kích hoạt DAG `manual__2026-10-21T18:03:51` từ Portal → **8/8 task thành công** (extract bỏ qua tải lại vì container dùng giờ UTC nên vẫn là ngày nạp 2026-10-21; transform 13 s, load 6,3 s, train_baselines 74 s, score_reviews 97 s). Số liệu không đổi: 104.777 review; Macro-F1 NB 0,6506 / LR 0,6595 / BiLSTM 0,6492.

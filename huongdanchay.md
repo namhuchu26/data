@@ -78,7 +78,7 @@ Trên thanh trên cùng của Portal, ba mục **MinIO, PostgreSQL, Airflow** ph
 Ở lần khởi động đầu tiên, **DAG tự chạy một lần**. Muốn chạy lại thì:
 
 1. Portal → tab **Pipeline** → bấm **▶ Chạy ngay**.
-2. Theo dõi trên sơ đồ tác vụ: ô chuyển dần từ *Chưa chạy* sang *Đang chạy* rồi *Thành công*. Toàn bộ mất khoảng **2–4 phút**; lần đầu lâu hơn vì phải tải dữ liệu.
+2. Theo dõi trên sơ đồ tác vụ: ô chuyển dần từ *Chưa chạy* sang *Đang chạy* rồi *Thành công*. Với cấu hình hiện tại (`SAMPLE_FRAC=1.0`, toàn bộ dữ liệu) mất khoảng **10 phút**; lần đầu mỗi ngày lâu hơn 1–2 phút vì phải tải dữ liệu.
 3. Bấm vào một ô tác vụ bất kỳ để xem **log** và **kết quả trả về (XCom)**.
 
 Cùng lúc đó, bạn có thể xem kết quả ở các tab khác:
@@ -90,7 +90,7 @@ Cùng lúc đó, bạn có thể xem kết quả ở các tab khác:
 | **Khai phá dữ liệu** | So sánh Naive Bayes và Logistic Regression, ma trận nhầm lẫn, từ khóa quyết định, review bị dự đoán sai |
 | **Tổng quan** | Tóm tắt toàn bộ hệ thống và báo cáo chất lượng dữ liệu |
 
-**Kết quả đúng** sau khi chạy xong: kho có **104.777 review**; Logistic Regression đạt Macro-F1 khoảng **0,660**, Naive Bayes khoảng **0,651**.
+**Kết quả đúng** sau khi chạy xong: kho có **691.806 review**; Logistic Regression đạt Macro-F1 khoảng **0,673**, Naive Bayes khoảng **0,648**; BiLSTM (đã train sẵn, tải lên từ notebook) **0,706**.
 
 ---
 
@@ -141,6 +141,6 @@ DAG tự chạy **mỗi ngày lúc 07:00** (giờ Việt Nam) nếu máy đang b
 Sửa file `.env` rồi chạy `docker compose up -d`, sau đó **Chạy ngay** pipeline:
 
 - `AMZ_CATEGORY=All_Beauty`: đổi danh mục sản phẩm, ví dụ `Video_Games`, `Gift_Cards`. Tên danh mục phải đúng như trên trang Amazon Reviews 2023.
-- `SAMPLE_FRAC=0.15`: tỷ lệ review được lấy mẫu. Tăng lên thì nhiều dữ liệu hơn nhưng chạy lâu hơn và tốn RAM hơn.
+- `SAMPLE_FRAC=1.0`: tỷ lệ review được lấy (hiện là 100%). Giảm xuống (ví dụ `0.15`) để chạy nhanh hơn khi thử nghiệm; khi đổi phải train lại BiLSTM vì tập test thay đổi.
 
 Chi tiết kỹ thuật (MinIO, pipeline, kho, mô hình) xem trong `README.md` và `agent.md`.

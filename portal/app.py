@@ -408,6 +408,13 @@ class DagAction(BaseModel):
 
 @app.post("/api/pipeline/trigger")
 def pipeline_trigger(a: DagAction):
+    # Chặn bấm trùng: đã có lần chạy đang chờ/đang chạy thì không tạo thêm
+    active = [r for r in AF.call("GET", f"/dags/{_q(a.dag_id)}/dagRuns",
+                                 params={"limit": 20, "order_by": "-run_after"}).json()["dag_runs"]
+              if r.get("state") in ("queued", "running")]
+    if active:
+        raise HTTPException(409, f"Đang có lần chạy {active[0]['dag_run_id']} ({active[0]['state']}), "
+                                 "chờ lần này xong rồi hãy chạy lại")
     return AF.call("POST", f"/dags/{_q(a.dag_id)}/dagRuns",
                    json={"logical_date": None, "conf": {}}).json()
 

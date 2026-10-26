@@ -1,0 +1,89 @@
+{
+  "model": "lstm",
+  "display_name": "BiLSTM",
+  "family": "Deep Learning",
+  "trained_at": "2026-10-21T05:14:19",
+  "labels": [
+    "negative",
+    "neutral",
+    "positive"
+  ],
+  "accuracy": 0.7566,
+  "precision_macro": 0.6559,
+  "recall_macro": 0.7248,
+  "f1_macro": 0.6492,
+  "f1_weighted": 0.7971,
+  "per_class": {
+    "negative": {
+      "precision": 0.7631,
+      "recall": 0.7214,
+      "f1": 0.7417,
+      "support": 4332
+    },
+    "neutral": {
+      "precision": 0.2284,
+      "recall": 0.6772,
+      "f1": 0.3416,
+      "support": 1682
+    },
+    "positive": {
+      "precision": 0.9761,
+      "recall": 0.7757,
+      "f1": 0.8645,
+      "support": 14942
+    }
+  },
+  "confusion_matrix": [
+    [
+      3125,
+      1087,
+      120
+    ],
+    [
+      379,
+      1139,
+      164
+    ],
+    [
+      591,
+      2760,
+      11591
+    ]
+  ],
+  "n_train": 75438,
+  "n_test": 20956,
+  "features": "Embedding 128 chiều, chuỗi 150 token, từ điển 30,000",
+  "train_seconds": 4606.3,
+  "history": {
+    "accuracy": [
+      0.7319,
+      0.8032,
+      0.8379,
+      0.8624
+    ],
+    "loss": [
+      0.7458,
+      0.5722,
+      0.4854,
+      0.4173
+    ],
+    "val_accuracy": [
+      0.7401,
+      0.7575,
+      0.7587,
+      0.7303
+    ],
+    "val_loss": [
+      0.5993,
+      0.5713,
+      0.5948,
+      0.7404
+    ]
+  },
+  "label_distribution": {
+    "positive": 14942,
+    "negative": 4332,
+    "neutral": 1682
+  },
+  "quick_test": false
+}

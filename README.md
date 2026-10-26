@@ -29,7 +29,7 @@ docker compose up -d --build      # lần đầu mất vài phút để build im
 
 Sau khoảng 1–2 phút, mở **http://localhost:8000**. Trên thanh trên cùng, ba mục MinIO, PostgreSQL và Airflow đều phải hiện "hoạt động".
 
-Chạy pipeline: vào tab **Pipeline** → bấm **▶ Chạy ngay**. Với `SAMPLE_FRAC=0.15` (khoảng 105.000 review), lần đầu chạy mất khoảng 3–4 phút (gồm tải 134 MB dữ liệu gốc). Trong lúc chạy, bạn theo dõi được:
+Chạy pipeline: vào tab **Pipeline** → bấm **▶ Chạy ngay**. Với `SAMPLE_FRAC=1.0` (toàn bộ 691.806 review sạch, cấu hình hiện tại) một lần chạy mất khoảng 10 phút, cộng 1–2 phút tải 134 MB dữ liệu gốc ở lần đầu mỗi ngày; với `SAMPLE_FRAC=0.15` (khoảng 105.000 review) chỉ khoảng 4 phút. Trong lúc chạy, bạn theo dõi được:
 
 - **Pipeline**: tác vụ nào đang chạy, xem log và kết quả XCom của từng tác vụ.
 - **Data Lake**: file mới xuất hiện ngay lập tức trong luồng *Sự kiện realtime*.
@@ -177,7 +177,7 @@ LSTM được đánh giá trên **đúng tập test** của các mô hình ML, n
 ## 7. Ghi chú phương pháp
 
 - `price` trong metadata là giá tại thời điểm thu thập (2023), nên được quy đổi bằng tỷ giá năm 2023. Tỷ giá theo năm trong `dim_time` dùng cho phân tích theo thời gian.
-- Khoảng 73% review thuộc sản phẩm không có giá trong metadata (phân khúc "Không rõ").
+- Khoảng 74% review (508.851 / 691.806) thuộc sản phẩm không có giá trong metadata (phân khúc "Không rõ").
 - Nhãn lệch mạnh về Tích cực (khoảng 71%). Vì vậy mô hình dùng `class_weight="balanced"` và nên so sánh bằng **Macro-F1** thay vì chỉ Accuracy. Lớp Trung tính (3★) là lớp khó nhất.
 
 ## 8. Xử lý sự cố

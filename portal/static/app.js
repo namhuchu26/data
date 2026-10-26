@@ -493,7 +493,9 @@ TABS.pipeline = {
         </div>
         <div class="actions">
           <label class="switch"><input type="checkbox" data-pause="${esc(d.dag_id)}" ${d.is_paused ? "" : "checked"}>${d.is_paused ? "Đang tạm dừng" : "Đang bật lịch"}</label>
-          <button class="btn" data-trigger="${esc(d.dag_id)}">▶ Chạy ngay</button>
+          ${["queued", "running"].includes(d.last_run?.state)
+            ? `<button class="btn" disabled title="Chờ lần chạy hiện tại xong">Đang chạy…</button>`
+            : `<button class="btn" data-trigger="${esc(d.dag_id)}">▶ Chạy ngay</button>`}
         </div>
       </div>`).join("");
     $$("[data-trigger]").forEach((b) => (b.onclick = async () => {
