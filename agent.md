@@ -76,6 +76,7 @@
 | Slide thuyết trình | ➖ Không làm (người dùng không yêu cầu) |
 | README hướng dẫn (gồm hướng dẫn MinIO) | ✅ Xong |
 | `huongdanchay.md` (hướng dẫn chạy từng bước) | ✅ Xong (2026-10-21) |
+| `learn.docx` (tài liệu học cho người mới) | ✅ Xong (2026-10-26, 26 trang) |
 
 ---
 
@@ -109,6 +110,7 @@ cuoiki/
 ├── CLAUDE.md                   # quy tắc cho Claude Code; tự nạp agent.md
 ├── README.md                   # tài liệu kỹ thuật: MinIO, pipeline, kho, xử lý sự cố
 ├── huongdanchay.md             # hướng dẫn chạy từng bước cho người mới (Windows)
+├── learn.docx                  # TÀI LIỆU HỌC cho người mới (26 trang): khái niệm nền tảng, hành trình 1 review thật, đọc kết quả, bản đồ code, bài thực hành, hỏi–đáp bảo vệ, thuật ngữ. Nguồn: baocao/learn.js
 ├── BaoCao_DoAn.docx            # BÁO CÁO ĐỒ ÁN (Word, 32 trang, 9 chương + phụ lục, 15 hình)
 ├── baocao/                     # nguồn dựng báo cáo: build.js (thư viện docx của Node), arch.html (sơ đồ kiến trúc), img/ (15 hình chụp từ Portal), jobs.json. Dựng lại: `NODE_PATH=<thư mục có node_modules/docx> node baocao/build.js out.docx`, rồi mở bằng Word để cập nhật mục lục
 ├── detai.docx                  # đề cương gốc (giữ nguyên)
@@ -371,6 +373,7 @@ docker exec -it amz-postgres psql -U dw -d dwh
 ## 18. Nhật ký thay đổi (mới nhất ở trên)
 
 ### 2026-10-26
+- Viết `learn.docx` (26 trang, nguồn `baocao/learn.js`): tài liệu học cho người chưa có chuyên môn — 8 phần (bức tranh lớn qua ẩn dụ nhà máy; khái niệm nền: JSON/Parquet, Data Lake/MinIO, Warehouse, ETL, hình sao, SQL/OLAP, Airflow, Docker, ML, NLP, TF-IDF, 3 mô hình, các chỉ số; hành trình review thật `review_key=1` (Herbivore, 5★, điểm +0,38) qua từng bước; đọc kết quả; bản đồ code; 4 bài thực hành; 12 câu hỏi bảo vệ; 44 thuật ngữ). Phát hiện thêm ví dụ lỗi lemmatize: *does* → *doe*.
 - `detai_capnhat.docx`: sửa đoạn "Quy mô và lấy mẫu" sang toàn bộ danh mục (701.528 → 691.806 review sau làm sạch; mẫu 15% chỉ dùng khi phát triển) và môi trường học sâu là Google Colab GPU. Đã mở thử bằng Word (3 trang).
 - Portal chống bấm trùng **▶ Chạy ngay**: frontend khóa nút ("Đang chạy…") khi lần chạy gần nhất đang queued/running; backend `POST /api/pipeline/trigger` kiểm tra Airflow và trả **HTTP 409** nếu đã có lần chạy hoạt động. Đã kiểm thử: trong lúc DAG tự chạy `scheduled__2026-10-26T00:00:00`, 2 lần bấm đều bị từ chối, không tạo lần chạy trùng.
 - Commit toàn bộ dự án vào git (trước đó repo mới có 1 commit `hello`).
